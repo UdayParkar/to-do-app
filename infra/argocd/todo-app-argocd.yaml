@@ -1,22 +1,22 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: todo-app-argocd
-  namespace: argocd   # ArgoCD always runs in this namespace
+  name: todo-app
+  namespace: argocd   # ArgoCD itself runs in the argocd namespace
 spec:
   project: default
 
   source:
-    repoURL: 'https://github.com/UdayParkar/to-do-app.git'   # 👈 change to your repo
-    targetRevision: main                                   # branch name
-    path: k8s                                              # folder where your k8s yamls live
+    repoURL: 'https://github.com/UdayParkar/to-do-app.git'   # 👈 your repo
+    targetRevision: main                                    # branch to track
+    path: k8s                                               # folder where yamls live
 
   destination:
     server: https://kubernetes.default.svc
-    namespace: default   # or create "todo-app" namespace if you prefer isolation
+    namespace: default   # or use "todo-app" if you want isolation
 
   syncPolicy:
-    automated:       # 👈 enables GitOps (auto-sync)
+    automated:       # 👈 enables GitOps auto-sync
       prune: true    # delete resources not in Git
       selfHeal: true # re-apply if drift happens
     syncOptions:
