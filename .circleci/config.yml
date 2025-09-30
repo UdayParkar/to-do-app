@@ -54,7 +54,7 @@ jobs:
             git config --global user.name "circleci"
             git add k8s/deployment.yaml
             git commit -m "Update image to $IMAGE_TAG [skip ci]" || echo "No changes to commit"
-            git push https://$GH_TOKEN@github.com/UdayParkar/to-do-app.git HEAD:main
+            git push https://$GITHUB_TOKEN@github.com/UdayParkar/to-do-app.git HEAD:main
 
 workflows:
   version: 2
