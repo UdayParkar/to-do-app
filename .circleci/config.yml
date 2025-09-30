@@ -1,0 +1,69 @@
+version: 2.1
+
+executors:
+  docker-executor:
+    docker:
+      - image: cimg/node:18.20   # Node.js for running tests
+  docker-publisher:
+    docker:
+      - image: cimg/base:stable  # Base image with Docker + kubectl tools
+
+jobs:
+  # ---- Job 1: Run Tests ----
+  test:
+    executor: docker-executor
+    steps:
+      - checkout
+      - run:
+          name: Install Dependencies
+          command: npm install
+      - run:
+          name: Run Tests
+          command: npm test -- --watchAll=false
+
+  # ---- Job 2: Build & Push Docker Image ----
+  build-and-push:
+    executor: docker-publisher
+    steps:
+      - checkout
+      - setup_remote_docker:
+          docker_layer_caching: false
+      - run:
+          name: Build Docker Image
+          command: |
+            IMAGE_TAG=${CIRCLE_SHA1:0:7}
+            docker build -t udayparkar/todo-app:$IMAGE_TAG .
+      - run:
+          name: Push Docker Image
+          command: |
+            IMAGE_TAG=${CIRCLE_SHA1:0:7}
+            echo $DOCKERHUB_PASS | docker login -u $DOCKERHUB_USER --password-stdin
+            docker push udayparkar/todo-app:$IMAGE_TAG
+
+  # ---- Job 3: Deploy to Kubernetes ----
+  deploy:
+    executor: docker-publisher
+    steps:
+      - checkout
+      - run:
+          name: Setup kubectl
+          command: |
+            echo $KUBECONFIG_FILE | base64 --decode > $HOME/.kube/config
+      - run:
+          name: Deploy to EKS
+          command: |
+            IMAGE_TAG=${CIRCLE_SHA1:0:7}
+            sed "s|udayparkar/todo-app:latest|udayparkar/todo-app:$IMAGE_TAG|g" k8s/deployment.yaml | kubectl apply -f -
+            kubectl apply -f k8s/service.yaml
+
+workflows:
+  version: 2
+  ci-cd:
+    jobs:
+      - test
+      - build-and-push:
+          requires:
+            - test
+      - deploy:
+          requires:
+            - build-and-push

@@ -36,3 +36,18 @@ coverage/
 # Cache
 .cache/
 .parcel-cache/
+
+# Terraform state
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+
+# Terraform provider lock file
+.terraform.lock.hcl
+
+# Terraform working directory
+.terraform/
+
+# Sensitive variable files
+infra/terraform/eks-cluster/secrets.tfvars
