@@ -7,7 +7,7 @@ spec:
   project: default
 
   source:
-    repoURL: 'https://github.com/UdayParkar/todo-app.git'   # 👈 change to your repo
+    repoURL: 'https://github.com/UdayParkar/to-do-app.git'   # 👈 change to your repo
     targetRevision: main                                   # branch name
     path: k8s                                              # folder where your k8s yamls live
 
