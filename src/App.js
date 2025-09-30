@@ -65,7 +65,7 @@ class App extends Component {
   
     editItem = (index) => {
       const todos = [...this.state.list];
-      const editedTodo = prompt('Edit the todo:');
+      const editedTodo = prompt('Edit the todooooo:');
       if (editedTodo !== null && editedTodo.trim() !== '') {
         let updatedTodos = [...todos]
         updatedTodos[index].value= editedTodo
