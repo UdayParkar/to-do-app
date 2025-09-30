@@ -137,3 +137,19 @@ resource "aws_security_group_rule" "alb_to_nodes" {
   security_group_id        = module.eks.node_security_group_id
   source_security_group_id = aws_security_group.alb_sg.id
 }
+
+# ---- Auto-attach EC2 worker nodes to Target Group ----
+data "aws_instances" "eks_nodes" {
+  filter {
+    name   = "tag:eks:nodegroup-name"
+    values = ["default"]
+  }
+}
+
+resource "aws_lb_target_group_attachment" "asg_nodes" {
+  count            = length(data.aws_instances.eks_nodes.ids)
+  target_group_arn = aws_lb_target_group.todo_tg.arn
+  target_id        = data.aws_instances.eks_nodes.ids[count.index]
+  port             = 30080
+}
+

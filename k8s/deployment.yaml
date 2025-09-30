@@ -16,6 +16,6 @@ spec:
     spec:
       containers:
         - name: todo-app
-          image: udayparkar/todo-app:latest   # CircleCI replaces this tag
+          image: udayparkar/todo-app:1.0.0   # CircleCI replaces this tag
           ports:
             - containerPort: 80

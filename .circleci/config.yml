@@ -6,7 +6,7 @@ executors:
       - image: cimg/node:18.20   # Node.js for running tests
   docker-publisher:
     docker:
-      - image: cimg/base:stable  # Base image with Docker + kubectl tools
+      - image: cimg/base:stable  # Base image with Docker + Git tools
 
 jobs:
   # ---- Job 1: Run Tests ----
@@ -40,21 +40,25 @@ jobs:
             echo $DOCKERHUB_PASS | docker login -u $DOCKERHUB_USER --password-stdin
             docker push udayparkar/todo-app:$IMAGE_TAG
 
-  # ---- Job 3: Deploy to Kubernetes ----
-  deploy:
+  # ---- Job 3: Update Manifests for ArgoCD ----
+  update-manifests:
     executor: docker-publisher
     steps:
       - checkout
       - run:
-          name: Setup kubectl
-          command: |
-            echo $KUBECONFIG_FILE | base64 --decode > $HOME/.kube/config
-      - run:
-          name: Deploy to EKS
+          name: Update Kubernetes Manifests with new Image Tag
           command: |
             IMAGE_TAG=${CIRCLE_SHA1:0:7}
-            sed "s|udayparkar/todo-app:latest|udayparkar/todo-app:$IMAGE_TAG|g" k8s/deployment.yaml | kubectl apply -f -
-            kubectl apply -f k8s/service.yaml
+            sed -i "s|udayparkar/todo-app:.*|udayparkar/todo-app:$IMAGE_TAG|g" k8s/deployment.yaml
+            git config --global user.email "circleci@ci.com"
+            git config --global user.name "circleci"
+
+            # ---- GitHub authentication ----
+            git remote set-url origin https://$GITHUB_USER:$GITHUB_TOKEN@github.com/UdayParkar/todo-app.git
+
+            git add k8s/deployment.yaml
+            git commit -m "Update image to $IMAGE_TAG [skip ci]" || echo "No changes to commit"
+            git push origin main
 
 workflows:
   version: 2
@@ -64,6 +68,6 @@ workflows:
       - build-and-push:
           requires:
             - test
-      - deploy:
+      - update-manifests:
           requires:
             - build-and-push

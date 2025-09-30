@@ -1,13 +1,13 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: todo-app
+  name: todo-app-argocd
   namespace: argocd   # ArgoCD always runs in this namespace
 spec:
   project: default
 
   source:
-    repoURL: 'https://github.com/udayparkar/todo-app.git'   # 👈 change to your repo
+    repoURL: 'https://github.com/UdayParkar/todo-app.git'   # 👈 change to your repo
     targetRevision: main                                   # branch name
     path: k8s                                              # folder where your k8s yamls live
 
