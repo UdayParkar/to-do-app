@@ -13,7 +13,7 @@ variable "cluster_name" {
 variable "node_instance_type" {
   description = "EC2 instance type for worker nodes"
   type        = string
-  default     = "m7i-flex.large"
+  default     = "t3.medium"   # keep cost low; m7i-flex.large is $$$
 }
 
 variable "desired_capacity" {
@@ -37,4 +37,17 @@ variable "max_size" {
 variable "eks_admin_arn" {
   description = "IAM ARN for the admin user of the EKS cluster"
   type        = string
+}
+
+# ---- Provider Credentials (injected via secrets.tfvars) ----
+variable "aws_access_key" {
+  description = "AWS access key for Terraform"
+  type        = string
+  sensitive   = true
+}
+
+variable "aws_secret_key" {
+  description = "AWS secret key for Terraform"
+  type        = string
+  sensitive   = true
 }

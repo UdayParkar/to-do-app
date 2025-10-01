@@ -1,21 +1,21 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: todo-app
+  name: to-do-app
   labels:
-    app: todo-app
+    app: to-do-app
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: todo-app
+      app: to-do-app
   template:
     metadata:
       labels:
-        app: todo-app
+        app: to-do-app
     spec:
       containers:
-        - name: todo-app
-          image: udayparkar/todo-app:4bedb93
-          ports:
-            - containerPort: 80
+      - name: to-do-app
+        image: udayparkar/todo-app:latest   # CircleCI will update this
+        ports:
+        - containerPort: 80

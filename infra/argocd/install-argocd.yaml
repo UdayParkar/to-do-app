@@ -1,8 +1,0 @@
-# infra/argocd/install-argocd.yaml - for namespace creation
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: argocd
-
-
-# kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
