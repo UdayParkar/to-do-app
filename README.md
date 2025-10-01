@@ -215,7 +215,7 @@ Open browser: `http://<EXTERNAL-IP>`
 ## 📸 Verification & Screenshots
 
 ### 1. CircleCI Pipeline  
-![CircleCI Pipeline](images/circleci-pipeline.png)
+![CircleCI Pipeline](images/circleciui-pipeline.png)
 
 **Expected Output:**
 - ✅ Build job: Success
@@ -224,7 +224,7 @@ Open browser: `http://<EXTERNAL-IP>`
 - ✅ Update manifests: Committed to GitHub
 
 ### 2. ArgoCD UI (Application Synced & Healthy)  
-![ArgoCD UI](images/argocd-ui-op.png)
+![ArgoCD UI](images/argo-ui-op.png)
 
 **Status Indicators:**
 - **Sync Status**: Synced
