@@ -395,6 +395,6 @@ terraform destroy
 ## 👨‍💻 Author
 
 **Your Name**  
-- GitHub: [@your-username](https://github.com/your-username)
-- LinkedIn: [Your Profile](https://linkedin.com/in/your-profile)
-- Email: your.email@example.com
+- GitHub: [@your-username](https://github.com/UdayParkar)
+- LinkedIn: [Your Profile](https://linkedin.com/in/uday-parkar)
+- Email: udayparkar2003@gmail.com
