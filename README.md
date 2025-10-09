@@ -39,7 +39,7 @@ to-do-app/
 │   │       ├── variables.tf          # Input variables
 │   │       ├── outputs.tf            # Output values
 │   │       ├── providers.tf          # Provider configuration
-│   │       └── secrets.tf            # Sensitive data configuration
+│   │       └── secrets.tfvars            # Sensitive data configuration
 │   ├── argocd/
 │   │   ├── argocd-app.yaml           # ArgoCD Application definition
 │   │   └── values.yaml               # Simplified Helm configuration for ArgoCD
