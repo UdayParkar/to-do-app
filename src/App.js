@@ -110,7 +110,7 @@ class App extends Component {
                                     className="mt-2"
                                     onClick={() => this.addItem()}
                                 >
-                                    ADD
+                                    ADD ITEM
                                 </Button>
                             </InputGroup>
                         </InputGroup>
