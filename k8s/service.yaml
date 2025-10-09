@@ -4,6 +4,8 @@ metadata:
   name: to-do-app-service
   labels:
     app: to-do-app
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-scheme: internet-facing
 spec:
   selector:
     app: to-do-app

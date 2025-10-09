@@ -5,8 +5,8 @@
   vars:
     argocd_namespace: argocd
     argocd_release_name: argocd
-    values_file: infra/argocd/values.yaml
-    app_manifest: infra/argocd/argocd-app.yaml
+    values_file: ../argocd/values.yaml         
+    app_manifest: ../argocd/argocd-app.yaml
 
   tasks:
     - name: Ensure argocd namespace exists
@@ -62,6 +62,6 @@
       debug:
         msg:
           - " ArgoCD successfully installed via Helm!"
-          - " UI: https://{{ svc_dns.stdout | default('localhost:8080') }}"
+          - " UI: http://{{ svc_dns.stdout | default('localhost:8080') }}"
           - " Username: admin"
           - " Password: {{ admin_pass.stdout }}"
