@@ -1,4 +1,4 @@
-# 🚀 To-Do App Deployment on AWS EKS with GitOps (ArgoCD) & CI/CD (CircleCI)
+# Automating Deployment of a Dockerized ToDo App on AWS EKS Using GitOps and ArgoCD 
 
 ## 📌 Project Overview
 
