@@ -7,6 +7,7 @@ This project demonstrates a **cloud-native DevOps workflow** for deploying a Rea
 - **Terraform** → Infrastructure as Code (VPC, EKS, IAM, EC2 worker nodes)  
 - **CircleCI** → CI/CD pipeline for Docker build & push  
 - **ArgoCD** → GitOps for Kubernetes sync and self-healing  
+- **Ansible** → Infrastructure automation for ArgoCD setup via Helm  
 - **Docker** → Containerized React app served via Nginx  
 
 The result is a fully automated, scalable, and reliable workflow from **code → container → cluster → end-user**.
@@ -15,7 +16,7 @@ The result is a fully automated, scalable, and reliable workflow from **code →
 - **AWS EKS Cluster**: Managed Kubernetes control plane
 - **VPC & Subnets**: Secure network infrastructure with public/private subnets
 - **CircleCI**: Automated CI/CD pipeline
-- **ArgoCD**: GitOps continuous delivery tool
+- **ArgoCD**: GitOps continuous delivery tool (installed via Helm + Ansible)
 - **Docker Hub**: Container registry for storing Docker images
 - **Application Load Balancer**: Exposes the application to end users
 
@@ -29,33 +30,38 @@ to-do-app/
 │   └── config.yml                    # CircleCI pipeline configuration
 ├── infra/
 │   ├── terraform/
-│   │   ├── bootstrap-backend/        # S3 backend for Terraform state
-│   │   │   ├── main.tf               # Backend bucket configuration
+│   │   ├── bootstrap-backend/        # S3 & DynamoDB backend for Terraform state
+│   │   │   ├── main.tf               # Backend bucket & DynamoDB configuration
 │   │   │   ├── variables.tf          # Backend variables
 │   │   │   └── outputs.tf            # Backend outputs
-│   │   └── eks-cluster/
+│   │   └── eks-cluster/              # EKS, VPC, IAM provisioning
 │   │       ├── main.tf               # Main Terraform configuration
 │   │       ├── variables.tf          # Input variables
 │   │       ├── outputs.tf            # Output values
 │   │       ├── providers.tf          # Provider configuration
 │   │       └── secrets.tf            # Sensitive data configuration
-│   └── argocd/
-│       ├── install.yaml              # ArgoCD installation manifest
-│       └── argocd-app.yaml           # ArgoCD application definition
+│   ├── argocd/
+│   │   ├── argocd-app.yaml           # ArgoCD Application definition
+│   │   └── values.yaml               # Simplified Helm configuration for ArgoCD
+│   └── ansible/
+│       ├── inventory.ini                  # Inventory for Ansible
+│       ├── setup-argocd-helm.yml         # Playbook for ArgoCD installation via Helm
+│       └── cleanup-argocd-helm.yml       # Playbook for ArgoCD cleanup
 ├── k8s/
-│   ├── deployment.yaml               # Kubernetes deployment manifest
-│   └── service.yaml                  # Kubernetes service manifest
+│   ├── deployment.yaml               # Kubernetes Deployment
+│   └── service.yaml                  # LoadBalancer Service (internet-facing)
 ├── images/                           # Screenshots and diagrams
-│   ├── circleci_pipeline.png         # CircleCI pipeline output
-│   ├── argocd_ui.png                 # ArgoCD dashboard screenshot
-│   └── todo_app.png                  # Running application screenshot
+│   ├── circleci-ui-new.png           # CircleCI pipeline output
+│   ├── argocd-ui-new.png             # ArgoCD dashboard screenshot
+│   ├── to-do-app-1.png               # To-Do App v1 (original version)
+│   └── to-do-app-2.png               # To-Do App v2 (updated via CI/CD)
 ├── src/                              # React application source code
 ├── public/                           # Static assets
-├── Dockerfile                        # Container image definition
+├── Dockerfile                        # Multi-stage Dockerfile for React + Nginx
 ├── package.json                      # Node.js dependencies
 ├── .dockerignore                     # Docker build exclusions
 ├── .gitignore                        # Git exclusions
-└── README.md                         # This file
+└── README.md                         # Documentation
 ```
 
 ---
@@ -105,6 +111,8 @@ Before you begin, ensure you have the following installed:
 - **AWS CLI** (v2.x or higher) - [Installation Guide](https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2.html)
 - **Terraform** (v1.5+) - [Download](https://www.terraform.io/downloads.html)
 - **kubectl** (v1.28+) - [Installation Guide](https://kubernetes.io/docs/tasks/tools/)
+- **Ansible** (v2.9+) - [Installation Guide](https://docs.ansible.com/ansible/latest/installation_guide/intro_installation.html)
+- **Helm** (v3.x+) - [Installation Guide](https://helm.sh/docs/intro/install/)
 - **Docker** (v20.x+) - [Get Docker](https://docs.docker.com/get-docker/)
 - **Git** - [Installation](https://git-scm.com/downloads)
 
@@ -140,18 +148,20 @@ terraform init
 terraform apply
 ```
 
+This creates S3 bucket and DynamoDB table for remote state management with locking.
+
 ### Step 4: Provision EKS Cluster
 
 ```bash
 cd ../eks-cluster
 terraform init
-terraform apply
+terraform apply -var-file="secrets.tfvars"
 ```
 
 This will create:
 - VPC with 3 public and 3 private subnets
-- EKS cluster (control plane)
-- Managed node group with 2-3 EC2 instances
+- EKS cluster (control plane) in ap-south-1 region
+- Managed node group with m7i-flex.large instances (2-3 nodes)
 - Required security groups and IAM roles
 
 ### Step 5: Configure kubectl
@@ -161,37 +171,48 @@ aws eks update-kubeconfig --region <your-region> --name <cluster-name>
 kubectl get nodes
 ```
 
-### Step 6: Install ArgoCD
+### Step 6: GitOps Deployment (ArgoCD)
+
+ArgoCD monitors the Git repo and syncs your Kubernetes manifests automatically.
+
+**Install ArgoCD via Ansible Helm playbook:**
 
 ```bash
-kubectl create namespace argocd
-kubectl apply -n argocd -f infra/argocd/install.yaml
-
-# Wait for ArgoCD pods to be ready
-kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=argocd-server -n argocd --timeout=300s
+cd infra/ansible
+ansible-playbook -i inventory.ini setup-argocd-helm.yml
 ```
 
-### Step 7: Access ArgoCD UI
+This playbook will:
+* Create the `argocd` namespace
+* Install ArgoCD via Helm using custom values
+* Deploy the To-Do app ArgoCD Application manifest
+* Display the ArgoCD UI URL and admin credentials
+
+**Access ArgoCD UI:**
+
+The playbook output will provide:
+* **UI URL**: `http://<LoadBalancer-DNS>` (from AWS ELB)
+* **Username**: `admin`
+* **Password**: Retrieved automatically from the secret
+
+Alternatively, get the details manually:
 
 ```bash
-# Get the initial admin password
-kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d
+# Get ArgoCD service URL
+kubectl get svc -n argocd argocd-server
 
-# Port-forward to access UI
-kubectl port-forward svc/argocd-server -n argocd 8080:443
+# Get admin password
+kubectl get secret argocd-initial-admin-secret -n argocd -o jsonpath="{.data.password}" | base64 --decode
 ```
 
-Open browser: `https://localhost:8080`  
-Username: `admin`  
-Password: (from the command above)
+### Step 7: 🔁 Continuous Integration (CircleCI)
 
-### Step 8: Deploy Application via ArgoCD
+**Pipeline tasks:**
+1. Run tests (`npm test`)
+2. Build Docker image
+3. Push image to DockerHub with commit SHA
 
-```bash
-kubectl apply -f infra/argocd/argocd-app.yaml
-```
-
-### Step 9: Configure CircleCI
+**Configure CircleCI:**
 
 1. Go to [CircleCI Dashboard](https://app.circleci.com/)
 2. Connect your GitHub repository
@@ -201,7 +222,7 @@ kubectl apply -f infra/argocd/argocd-app.yaml
    - `GITHUB_TOKEN`
 4. Trigger pipeline by pushing to main branch
 
-### Step 10: Access the Application
+### Step 8: Access the Application
 
 ```bash
 kubectl get svc -n default
@@ -214,32 +235,35 @@ Open browser: `http://<EXTERNAL-IP>`
 
 ## 📸 Verification & Screenshots
 
-### 1. CircleCI Pipeline  
-![CircleCI Pipeline](images/circleciui-pipeline.png)
+### 1. To-Do App Before Changes (v1)
+![To-Do App v1](images/to-do-app-1.png)
+
+**Original version deployed on EKS**
+
+### 2. To-Do App After CI/CD Update (v2)
+![To-Do App v2](images/to-do-app-2.png)
+
+**Updated version automatically deployed via CircleCI & ArgoCD (e.g., button color change)**
+
+### 3. CircleCI Pipeline  
+![CircleCI Pipeline](images/circleci-ui-new.png)
 
 **Expected Output:**
 - ✅ Build job: Success
 - ✅ Test job: All tests passed
-- ✅ Docker build & push: Image uploaded
+- ✅ Docker build & push: Image uploaded to Docker Hub
 - ✅ Update manifests: Committed to GitHub
+- ✅ Pipeline runs on every push to main branch
 
-### 2. ArgoCD UI (Application Synced & Healthy)  
-![ArgoCD UI](images/argo-ui-op.png)
+### 4. ArgoCD UI (Application Synced & Healthy)  
+![ArgoCD UI](images/argocd-ui-new.png)
 
 **Status Indicators:**
-- **Sync Status**: Synced
-- **Health Status**: Healthy
+- **Sync Status**: Synced ✅
+- **Health Status**: Healthy ✅
+- Real-time monitoring and auto-sync enabled
 
-### 3. To-Do App Running on AWS ELB  
-![App Running](images/webuitodo-1.png)
-
-**Features:**
-- Add, edit, delete tasks
-- Mark tasks as complete
-- Persistent storage
-- Responsive UI
-
-### 4. Terminal Verification  
+### 5. Terminal Verification  
 
 **Check Nodes:**
 ```bash
@@ -296,11 +320,34 @@ todo-app   Synced        Healthy
 Edit `infra/terraform/eks-cluster/terraform.tfvars`:
 
 ```hcl
-cluster_name    = "my-eks-cluster"
-region          = "us-east-1"
-node_count      = 2
-instance_type   = "t3.medium"
+region              = "ap-south-1"
+cluster_name        = "todo-eks"
+node_instance_type  = "m7i-flex.large"
+desired_capacity    = 2
+min_size            = 1
+max_size            = 3
 ```
+
+Create `infra/terraform/eks-cluster/secrets.tfvars` for sensitive credentials:
+
+```hcl
+aws_access_key = "YOUR_AWS_ACCESS_KEY"
+aws_secret_key = "YOUR_AWS_SECRET_KEY"
+eks_admin_arn  = "arn:aws:iam::YOUR_ACCOUNT_ID:user/YOUR_USERNAME"
+```
+
+⚠️ **Important**: Add `secrets.tfvars` to `.gitignore` to prevent committing credentials!
+
+### Ansible Configuration
+
+Edit `infra/ansible/inventory.ini`:
+
+```ini
+[local]
+localhost ansible_connection=local
+```
+
+The playbook runs locally and connects to your configured Kubernetes cluster via kubectl context.
 
 ### Kubernetes Resources
 
@@ -308,11 +355,13 @@ instance_type   = "t3.medium"
 - Replicas: 2 (configurable)
 - Image: Updated automatically by CircleCI
 - Resource limits: 500m CPU, 512Mi memory
+- Rolling update strategy for zero-downtime deployments
 
 **Service** (`k8s/service.yaml`):
 - Type: LoadBalancer
 - Port: 80
 - Target Port: 80
+- Internet-facing for end-user access
 
 ---
 
@@ -342,6 +391,15 @@ kubectl logs -n argocd deployment/argocd-application-controller
 - Verify environment variables are set correctly
 - Ensure Docker Hub credentials are valid
 
+**5. Ansible playbook errors:**
+```bash
+# Run with verbose output
+ansible-playbook -i inventory.ini setup-argocd-helm.yml -v
+
+# Check Helm installation
+helm list -n argocd
+```
+
 ### Health Checks
 
 ```bash
@@ -353,6 +411,9 @@ kubectl get all -n default
 
 # Check ArgoCD status
 kubectl get pods -n argocd
+
+# Verify Helm installation
+helm status argocd -n argocd
 ```
 
 ---
@@ -362,15 +423,15 @@ kubectl get pods -n argocd
 To avoid AWS charges, destroy all resources:
 
 ```bash
+# Option 1: Use Ansible cleanup playbook (recommended)
+cd infra/ansible
+ansible-playbook -i inventory.ini cleanup-argocd.yml
+
 # Delete Kubernetes resources
 kubectl delete -f k8s/
 
-# Delete ArgoCD
-kubectl delete -n argocd -f infra/argocd/install.yaml
-kubectl delete namespace argocd
-
 # Destroy EKS cluster
-cd infra/terraform/eks-cluster
+cd ../terraform/eks-cluster
 terraform destroy
 
 # Destroy backend (optional)
@@ -389,6 +450,8 @@ terraform destroy
 - [CircleCI Documentation](https://circleci.com/docs/)
 - [Kubernetes Documentation](https://kubernetes.io/docs/)
 - [Terraform AWS Provider](https://registry.terraform.io/providers/hashicorp/aws/latest/docs)
+- [Ansible Documentation](https://docs.ansible.com/)
+- [Helm Documentation](https://helm.sh/docs/)
 
 ---
 
